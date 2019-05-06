@@ -47,7 +47,7 @@ from shapely.wkb import dumps, loads
 from collections import defaultdict
 from pprint import pprint
 from fastkml import kml
-from shapely.geometry import Point, LineString, Polygon, MultiGeometry
+import shapely
 import zipfile
 try:
     import zlib

@@ -1,8 +1,10 @@
+## KML Exporter
+
 # About this exporter:
-This exporter was created for the previous version of FAIMS (v1.0) and in later versions became a core-part of the ‘Generalised Exporter’, the default exporter of the **FAIMS Mobile** server. The exporter outputs geospatial data (points, lines, polygons) in the form of Shapefile, together with associated metadata and relations.
+This exports exports module data as csvs and a single kmz file, including images. 
 
 ## Authorship:
-This exporter was co-developed by Brian Ballsun-Stanton at the FAIMS Project, Department of Ancient History, Macquarie University.
+This exporter was developed by Brian Ballsun-Stanton at the FAIMS Project, Department of Ancient History, Macquarie University.
 
 ## Funding:
 Development of this module was funded by ARC LE140100151, FAIMS: Transforming archaeological research through digital technologies
@@ -11,19 +13,19 @@ Development of this module was funded by ARC LE140100151, FAIMS: Transforming ar
 2014
 
 ## FAIMS Mobile / server version:
-FAIMS **v1.0** (Android 4+)
+FAIMS **v2.6** (Android 8+)
 
 ## Licence:
 This exporter is licensed under an international Creative Commons Attribution 4.0 Licence (**CC BY 4.0**).
 
 ## Access:
-This exporter can be downloaded directly from this repository and used on FAIMS **v1.0** server 
+This exporter can be downloaded directly from this repository and used on FAIMS **v2.6** server 
 1. Clone the repository
 1. Create a tarball (tar.gz) of the repository directory ([Do you know how-to-manage a tarball?](https://faimsproject.atlassian.net/wiki/spaces/MobileUser/pages/54984712/How+to+manage+a+tarball+archive))
 1. Upload the tarball to the server through the plugins interface (for details, see below)
 
 ## This exporter contains the following features:
-* Exports geospatial data as shapefile
+* Exports geospatial data as kml
 * Exports associated metadata and related records
 
 ## Exporter Use Recommendations:
