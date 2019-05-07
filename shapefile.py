@@ -43,9 +43,9 @@ import lsb_release
 import mimetypes, magic
 import traceback
 import glob
-from shapely.wkb import dumps, loads
+from shapely import wkb, wkt
 from collections import defaultdict
-from pprint import pprint
+from pprint import pprint, pformat
 from fastkml import kml
 import shapely
 import zipfile
@@ -192,13 +192,13 @@ moduleName = clean(jsondata['name'])
 fileNameType = "Identifier" #Original, Unchanged, Identifier
 
 
-
-if lsb_release.get_lsb_information()['RELEASE'] == '16.04':
-    LIBSPATIALITE = 'mod_spatialite.so'
-else:
-    LIBSPATIALITE = 'libspatialite.so.5'
-
-
+try:
+    if lsb_release.get_lsb_information()['RELEASE'] == '16.04':
+        LIBSPATIALITE = 'mod_spatialite.so'
+    else:
+        LIBSPATIALITE = 'libspatialite.so.5'
+except:
+     LIBSPATIALITE = 'mod_spatialite.so'
 images = None
 overrideFormattedIdentifiers = None
 try:
@@ -209,10 +209,10 @@ try:
     else:
         images = False
     # Ugh. But the interface is buggy.
-    if (foo["Export identifier components in plain as well as formatted state (if in doubt, leave the setting as is)?"] != []):
-        overrideFormattedIdentifiers = False
-    else:
-        overrideFormattedIdentifiers = True
+    # if (foo["Export identifier components in plain as well as formatted state (if in doubt, leave the setting as is)?"] != []):
+    overrideFormattedIdentifiers = False
+    # else:
+    #     overrideFormattedIdentifiers = True
 except:
     sys.stderr.write("Json input failed")
     images = True
@@ -352,7 +352,7 @@ if (overrideFormattedIdentifiers):
     files.append('shape.out')
 
 
-
+kmlimages = {}
 
 if images:
     attachedfiledump = []
@@ -364,9 +364,15 @@ if images:
     outputFilename =defaultdict(int)
     outputAent = defaultdict(int)
     mime = magic.Magic(mime=True)
+
+
+
     print "* File list exported:"
     for filename in importCon.execute("select uuid, measure, freetext, certainty, attributename, aenttypename from latestnondeletedaentvalue join attributekey using (attributeid) join latestnondeletedarchent using (uuid) join aenttype using (aenttypeid) where attributeisfile is not null and measure is not null"):
-        try:        
+        try:
+            if not filename[0] in kmlimages:
+                kmlimages[filename[0]] = []
+
             oldPath = filename[1].split("/")
             oldFilename = oldPath[2]
             aenttypename = clean(filename[5])
@@ -391,7 +397,7 @@ if images:
 
                     newFilename =  "%s/%s/%s_%s%s%s" % (aenttypename, attributename, identifier, filehash["%s%s" % (filename[0], attributename)],delimiter, r.group(0))
                     
-
+                    kmlimages[filename[0]].append(newFilename)
 
                 exifdata = exifCon.execute("select * from %s where uuid = %s" % (aenttypename, filename[0])).fetchone()
                 iddata = [] 
@@ -400,6 +406,7 @@ if images:
 
 
                 shutil.copyfile(originalDir+filename[1], exportDir+newFilename)
+                
 
                 mergedata = exifdata.copy()
                 mergedata.update(jsondata)
@@ -413,10 +420,23 @@ if images:
                             "XPAuthor": exifdata['createdBy'],
                             "Software": "FAIMS Project",
                             "ImageID": exifdata['uuid'],
-                            "Copyright": jsondata['name']
-
+                            "Copyright": jsondata['name']                            
 
                             }
+                geomquery = importCon.execute("select x(geometryn(geospatialcolumn, 1)) as longitude, y(geometryn(geospatialcolumn, 1)) as latitude from latestnondeletedarchent where uuid = ?", [filename[0]]).fetchone()
+                if geomquery:
+                    #print geomquery
+                    if geomquery[0] >= 0:
+                        exifjson['GPSLongitudeRef'] = 'N'
+                    else:
+                        exifjson['GPSLongitudeRef'] = 'S'
+                    if geomquery[1] >= 0:
+                        exifjson['GPSLatitudeRef'] = 'N'
+                    else:
+                        exifjson['GPSLatitudeRef'] = 'S'
+                    
+                    exifjson['GPSLongitude'] = geomquery[0]
+                    exifjson['GPSLatitude'] = geomquery[1]
                 with open(exportDir+newFilename+".json", "w") as outfile:
                     json.dump(exifjson, outfile)    
 
@@ -433,7 +453,8 @@ if images:
                 outputFilename[filename[0]][attributename][filehash["%s%s" % (filename[0], attributename)]] = {"newFilename":newFilename,
                                                                    "mimeType":mime.from_file(originalDir+filename[1])
                                                                    }
-                
+                subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
+                subprocess.call(["jhead", "-norot","-rgtq", exportDir+newFilename])
                 print "    * %s" % (newFilename)
                 files.append(newFilename+".json")
                 files.append(newFilename)
@@ -457,7 +478,7 @@ if images:
     csv_writer = UnicodeWriter(open(exportDir+"attachedfiledump.csv", "wb+"))
     csv_writer.writerow(["uuid", "aenttype", "attribute", "filename", "mimeType"])
     for row in attachedfiledump:
-        print(row)
+        #print(row)
         csv_writer.writerow([row["uuid"], row["aenttype"], row["attribute"], row["newFilename"], row["mimeType"]])
     # check input flag as to what filename to export
 
@@ -505,27 +526,58 @@ shapeCon.load_extension(LIBSPATIALITE)
 kmlroot = kml.KML()
 ns = '{http://www.opengis.net/kml/2.2}'
 # 'docid'
-kmldoc = kml.Document(ns, jsondata['key'], jsondata['name'], jsondata)
+kmldoc = kml.Document(ns, jsondata['key'], jsondata['name'], json.dumps(jsondata))
 kmlroot.append(kmldoc)
 
 for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescription from aenttype"):
     aenttypename = row[1]
-    kmlfolder = kml.Folder(ns, row[0], aenttypename, row[2])
+    kmlfolder = kml.Folder(ns, str(row[0]), aenttypename, row[2])
     kmldoc.append(kmlfolder)
 
     # Make a placemark for each geometry in this aent
-    for geomrow in importCon.execute("SELECT uuid, asewkb(geosptialcolumn) FROM latestnondeletedarchent where aenttypeid = ? and geosptialcolumn is not null", [row[0]]):
-        print geomrow
-        exportrow = exportCon.execute("SELECT * FROM {} WHERE uuid = ?".format(aenttypename), [geomrow[0]]).fetchone()
-        placemark = kml.Placemark(ns, exportrow['uuid'], exportrow['identifier'])
-        placemark.geometry = loads(geomrow[1])
-
+    for geomrow in importCon.execute("SELECT uuid, aswkt(geometryn(geospatialcolumn,1)) FROM latestnondeletedarchent where aenttypeid = ? and geospatialcolumn is not null", [row[0]]):
+        #print geomrow
+        exportrow = exportCon.execute("SELECT * FROM {} WHERE uuid = ?".format(clean(aenttypename)), [geomrow[0]]).fetchone()
+        placemark = kml.Placemark(ns, str(exportrow['uuid']), exportrow['identifier'])
+        placemark.geometry = wkt.loads(geomrow[1])
+        description = """
+        <h1>{}</h1>
+        """.format(aenttypename)        
+        uuid = int(exportrow['uuid'])
+        #kmlimages iterator on uuid
+        # print("kmlimages", uuid)
+        # pprint(kmlimages)
+        if uuid in kmlimages:
+            for image in kmlimages[uuid]:
+                #print "Adding %s"%(image)
+                imagepath = image.split("/")
+                description = """{}
+                <h2>{}</h2>
+                <p>{}</p>
+                <img style="width: 90vw; " src="{}/{}"/>
+                <dl>
+                """.format(description, imagepath[1], imagepath[2], moduleName, image)
+                #print description
+            
+            
+        extended_data = []
         for key in exportrow:
-            kmldata = kml.Data(ns, name=key, value=exportrow[key])
+            if "geospatialcolumn" not in key:
+                data = kml.UntypedExtendedDataElement(ns, name=key, value=str(exportrow[key]))                
+                extended_data.append(data)
+                if exportrow[key]:
+                    description = "{}<dt>{}</dt><dd>{}</dd>".format(description, key, exportrow[key])
+        description = "{}</dl>".format(description)
+        placemark.description = description
+        placemark.extended_data = kml.UntypedExtendedData(ns, elements=extended_data)
+
 
         kmlfolder.append(placemark)
 
+with open("%s/faims.kml"%(exportDir), "w") as faimskml:
+    faimskml.write(kmldoc.to_string(prettyprint=True))
 
+files.append("faims.kml")
 
 
 
@@ -592,7 +644,7 @@ print "```"
 #     tarf.close()
 
 
-with ZipFile("%s/%s-export.zip" % (finalExportDir, moduleName), 'w', compression, allowZip64=True) as zipf:
+with zipfile.ZipFile("%s/%s-export.kmz" % (finalExportDir, moduleName), 'w', compression, allowZip64=True) as zipf:
     for file in files:
         zipf.write(exportDir+file, arcname=moduleName+'/'+file)
 
