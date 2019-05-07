@@ -47,11 +47,10 @@ import datetime
 from shapely import wkb, wkt
 from collections import defaultdict
 from pprint import pprint, pformat
-from fastkml import kml
 import shapely
 import zipfile
 from collections import OrderedDict
-from fastkml import styles
+
 try:
     import zlib
     compression = zipfile.ZIP_DEFLATED
@@ -70,6 +69,9 @@ handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 root.addHandler(handler)
+
+from fastkml import kml
+from fastkml import styles
 
 #https://stackoverflow.com/a/250373/263449
 def smart_truncate(content, length=100, suffix='...'):
@@ -478,7 +480,7 @@ if images:
                 subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
                 subprocess.call(["jhead", "-norot","-rgtq", exportDir+newFilename])
 
-                print "    * %s" % (newFilename)
+                print "    * `%s`" % (newFilename)
                 files.append(newFilename+".json")
                 files.append(newFilename)
                 attachedfiledump.append({"uuid":filename[0], 
@@ -691,10 +693,9 @@ for relntypeid, relntypename in relntypecursor.execute(relntypequery):
     csv_writer = UnicodeWriter(open(exportDir+"Relationship-%s.csv" % (clean(relntypename)), "wb+"))
     csv_writer.writerow([i[0] for i in relncursor.description]) # write headers
     csv_writer.writerows(relncursor)
-print "**Files Exported** \n\n"
-for file in files:
-    print("* {}".format(file))
-print "```"
+#print "**Files Exported** \n\n"
+#for file in files:
+#    print("* `{}`".format(file))
 
 # tarf = tarfile.open("%s/%s-export.tar.bz2" % (finalExportDir,moduleName), 'w:bz2')
 # try:
