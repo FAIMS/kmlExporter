@@ -51,6 +51,7 @@ from pprint import pprint, pformat
 import shapely
 import zipfile
 from collections import OrderedDict
+import hashlib
 
 try:
     import zlib
@@ -560,16 +561,17 @@ kmlroot.append(kmldoc)
 for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescription from aenttype"):
     aenttypename = row[1]
     kmlfolder = kml.Folder(ns, str(row[0]), aenttypename, row[2])
+    color = hashlib.sha1(aenttypename).hexdigest()[0:6]
+    print(aenttypename, color)
     kmldoc.append(kmlfolder)
-
     # Make a placemark for each geometry in this aent
     for geomrow in importCon.execute("SELECT uuid, aswkt(geometryn(geospatialcolumn,1)) FROM latestnondeletedarchent where aenttypeid = ? and geospatialcolumn is not null", [row[0]]):
         #print geomrow
-        
         exportrow = exportCon.execute("SELECT * FROM {} WHERE uuid = ?".format(clean(aenttypename)), [geomrow[0]]).fetchone()
         placemark = kml.Placemark(ns, str(exportrow['uuid']), exportrow['identifier'])
         placemark.geometry = wkt.loads(geomrow[1])
-
+        
+        placemark.append_style(styles.Style(ns, styles=[styles.IconStyle(ns, color="ff{}".format(color), icon_href="http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png"), styles.LabelStyle(ns, colorMode="normal", color="ff{}".format(color))]))
         description = """
         <p><i>{}</i></p>
         """.format(aenttypename)        
