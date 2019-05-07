@@ -479,7 +479,7 @@ if images:
                                                                    "mimeType":mime.from_file(originalDir+filename[1])
                                                                    }
                 subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
-                subprocess.call(["jhead", "-norot","-rgtq", exportDir+newFilename])
+                subprocess.call(["jhead", "-norot","-r", "-g", "-t", "-q", exportDir+newFilename])
 
                 print "    * `%s`" % (newFilename)
                 files.append(newFilename+".json")
