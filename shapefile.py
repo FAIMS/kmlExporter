@@ -18,7 +18,7 @@ Python:
 
 
 '''
-
+import logging
 import unicodedata
 import sqlite3
 import csv, codecs, cStringIO
@@ -43,12 +43,15 @@ import lsb_release
 import mimetypes, magic
 import traceback
 import glob
+import datetime
 from shapely import wkb, wkt
 from collections import defaultdict
 from pprint import pprint, pformat
 from fastkml import kml
 import shapely
 import zipfile
+from collections import OrderedDict
+from fastkml import styles
 try:
     import zlib
     compression = zipfile.ZIP_DEFLATED
@@ -60,6 +63,20 @@ modes = { zipfile.ZIP_DEFLATED: 'deflated',
           }
 
 print sys.argv
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+root.addHandler(handler)
+
+#https://stackoverflow.com/a/250373/263449
+def smart_truncate(content, length=100, suffix='...'):
+    if len(content) <= length:
+        return content
+    else:
+        return ' '.join(content[:length+1].split(' ')[0:-1]) + suffix
 
 class UTF8Recoder:
     """
@@ -147,7 +164,10 @@ class UnicodeWriter:
 
 
 def dict_factory(cursor, row):
-    d = {}
+
+    d = OrderedDict()
+
+
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
@@ -158,12 +178,12 @@ def upper_repl(match):
         return ""
     return match.group(1).upper()
 
-def clean(str):
-     out = re.sub(" ([a-z])|[^A-Za-z0-9]+", upper_repl, str)     
+def clean(instr):
+     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr))
      return out
 
-def cleanWithUnder(str):
-     out = re.sub("[^a-zA-Z0-9]+", "_", str)     
+def cleanWithUnder(instr):
+     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr))     
      return out  
 
 def makeSurePathExists(path):
@@ -218,8 +238,8 @@ except:
     images = True
 
 print "Exporting Images %s" % (images)
-print "Overwriting Identifier FormatStrings %s" % (overrideFormattedIdentifiers)
-print foo
+
+
 def zipdir(path, zip):
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -345,7 +365,7 @@ if (overrideFormattedIdentifiers):
 
 
 exportCon.commit()
-files = ['shape.sqlite3', 'noannotation.sqlite3']
+files = []
 
 if (overrideFormattedIdentifiers):
     files.append('override.out')
@@ -393,17 +413,18 @@ if images:
                     delimiter = ""
                     
                     if filename[2]:
-                        delimiter = "a"
-
+                        delimiter = "+({})+".format(smart_truncate(re.sub("[^A-Za-z0-9-]+", "-", filename[2])))
+                    caption = filename[2]
                     newFilename =  "%s/%s/%s_%s%s%s" % (aenttypename, attributename, identifier, filehash["%s%s" % (filename[0], attributename)],delimiter, r.group(0))
                     
-                    kmlimages[filename[0]].append(newFilename)
+                    kmlimages[filename[0]].append((newFilename, caption))
 
                 exifdata = exifCon.execute("select * from %s where uuid = %s" % (aenttypename, filename[0])).fetchone()
                 iddata = [] 
                 for id in importCon.execute("select coalesce(measure, vocabname, freetext) from latestnondeletedarchentidentifiers where uuid = %s union select aenttypename from latestnondeletedarchent join aenttype using (aenttypeid) where uuid = %s" % (filename[0], filename[0])):
                     iddata.append(id[0])
 
+                
 
                 shutil.copyfile(originalDir+filename[1], exportDir+newFilename)
                 
@@ -415,6 +436,7 @@ if images:
                             "UserComment": [json.dumps(mergedata)], 
                             "ImageDescription": exifdata['identifier'], 
                             "XPSubject": "Annotation: %s" % (filename[2]),
+                            "Caption-Abstract": filename[2],
                             "Keywords": iddata,
                             "Artist": exifdata['createdBy'],
                             "XPAuthor": exifdata['createdBy'],
@@ -455,6 +477,7 @@ if images:
                                                                    }
                 subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
                 subprocess.call(["jhead", "-norot","-rgtq", exportDir+newFilename])
+
                 print "    * %s" % (newFilename)
                 files.append(newFilename+".json")
                 files.append(newFilename)
@@ -462,6 +485,7 @@ if images:
                           "aenttype": aenttypename,
                           "attribute": attributename,
                           "newFilename":newFilename,
+                          "annotation": filename[2],
                           "mimeType":mime.from_file(originalDir+filename[1])})
             else:
                 print "<b>Unable to find file %s, from uuid: %s" % (originalDir+filename[1], filename[0]) 
@@ -529,6 +553,7 @@ ns = '{http://www.opengis.net/kml/2.2}'
 kmldoc = kml.Document(ns, jsondata['key'], jsondata['name'], json.dumps(jsondata))
 kmlroot.append(kmldoc)
 
+
 for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescription from aenttype"):
     aenttypename = row[1]
     kmlfolder = kml.Folder(ns, str(row[0]), aenttypename, row[2])
@@ -537,29 +562,39 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
     # Make a placemark for each geometry in this aent
     for geomrow in importCon.execute("SELECT uuid, aswkt(geometryn(geospatialcolumn,1)) FROM latestnondeletedarchent where aenttypeid = ? and geospatialcolumn is not null", [row[0]]):
         #print geomrow
+        
         exportrow = exportCon.execute("SELECT * FROM {} WHERE uuid = ?".format(clean(aenttypename)), [geomrow[0]]).fetchone()
         placemark = kml.Placemark(ns, str(exportrow['uuid']), exportrow['identifier'])
         placemark.geometry = wkt.loads(geomrow[1])
+
         description = """
-        <h1>{}</h1>
+        <p><i>{}</i></p>
         """.format(aenttypename)        
         uuid = int(exportrow['uuid'])
         #kmlimages iterator on uuid
         # print("kmlimages", uuid)
         # pprint(kmlimages)
+        oldphotoheader = None
         if uuid in kmlimages:
-            for image in kmlimages[uuid]:
+            for image, caption in kmlimages[uuid]:
                 #print "Adding %s"%(image)
                 imagepath = image.split("/")
+                if oldphotoheader != imagepath[1]:
+                    oldphotoheader = imagepath[1]
+                    description = "{}<h4>{}</h4>".format(description, imagepath[1])
+                
+                    
                 description = """{}
-                <h2>{}</h2>
-                <p>{}</p>
-                <img style="width: 90vw; " src="{}/{}"/>
-                <dl>
-                """.format(description, imagepath[1], imagepath[2], moduleName, image)
+                <img style="width: 90vw; " src="{}/{}"/>                
+                """.format(description, moduleName, image)
+
+                if caption:
+                    description = """{}                
+                    <p>Annotation: <i>{}</i></p>""".format(description, caption)
                 #print description
             
-            
+        description = "{}<h4>Data</h4><dl>".format(description)
+
         extended_data = []
         for key in exportrow:
             if "geospatialcolumn" not in key:
@@ -568,7 +603,31 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
                 if exportrow[key]:
                     description = "{}<dt>{}</dt><dd>{}</dd>".format(description, key, exportrow[key])
         description = "{}</dl>".format(description)
+        description = "{}<h4>Relationships</h4><ul>".format(description)
+        for relatedreln in importCon.execute("""
+           SELECT child.uuid as childuuid, parent.participatesverb as parentparticipatesverb, child.aenttypename as childaenttypename, createdat
+             FROM (SELECT uuid, participatesverb, aenttypename, relationshipid, relntimestamp as createdat
+                     FROM latestnondeletedaentreln 
+                     JOIN relationship USING (relationshipid) 
+                     JOIN latestnondeletedarchent USING (uuid) 
+                     JOIN aenttype USING (aenttypeid)) parent 
+             JOIN (SELECT uuid, relationshipid, participatesverb, aenttypename 
+                     FROM latestnondeletedaentreln 
+                     JOIN relationship USING (relationshipid) 
+                     JOIN latestnondeletedarchent USING (uuid) 
+                     JOIN aenttype USING (aenttypeid)) child 
+               ON (parent.relationshipid = child.relationshipid AND parent.uuid != child.uuid)
+             WHERE parent.uuid = ?
+               """, [uuid]):
+            # print(relatedreln)
+            childidentifier = exportCon.execute("SELECT identifier FROM {} where uuid = ?".format(clean(relatedreln[2])), [int(relatedreln[0])]).fetchone()['identifier']
+            # print(childidentifier)
+            
+            description = "{}<li>{} {}: {}".format(description, relatedreln[1], relatedreln[2], childidentifier)
+        description = "{}</ul>".format(description)
+
         placemark.description = description
+
         placemark.extended_data = kml.UntypedExtendedData(ns, elements=extended_data)
 
 
@@ -632,8 +691,9 @@ for relntypeid, relntypename in relntypecursor.execute(relntypequery):
     csv_writer = UnicodeWriter(open(exportDir+"Relationship-%s.csv" % (clean(relntypename)), "wb+"))
     csv_writer.writerow([i[0] for i in relncursor.description]) # write headers
     csv_writer.writerows(relncursor)
-print "```"
-pprint(files)
+print "**Files Exported** \n\n"
+for file in files:
+    print("* {}".format(file))
 print "```"
 
 # tarf = tarfile.open("%s/%s-export.tar.bz2" % (finalExportDir,moduleName), 'w:bz2')
@@ -644,7 +704,7 @@ print "```"
 #     tarf.close()
 
 
-with zipfile.ZipFile("%s/%s-export.kmz" % (finalExportDir, moduleName), 'w', compression, allowZip64=True) as zipf:
+with zipfile.ZipFile("%s/%s-export-%s.kmz" % (finalExportDir, smart_truncate(moduleName), datetime.date.today().isoformat()), 'w', compression, allowZip64=True) as zipf:
     for file in files:
         zipf.write(exportDir+file, arcname=moduleName+'/'+file)
 
