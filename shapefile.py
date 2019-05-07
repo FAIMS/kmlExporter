@@ -44,6 +44,7 @@ import mimetypes, magic
 import traceback
 import glob
 import datetime
+import numpy
 from shapely import wkb, wkt
 from collections import defaultdict
 from pprint import pprint, pformat
