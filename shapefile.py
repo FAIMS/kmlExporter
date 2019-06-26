@@ -479,9 +479,10 @@ if images:
                 outputFilename[filename[0]][attributename][filehash["%s%s" % (filename[0], attributename)]] = {"newFilename":newFilename,
                                                                    "mimeType":mime.from_file(originalDir+filename[1])
                                                                    }
-                autorot = subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
-                norot = subprocess.call(["jhead", "-norot","-rgt", "-q", exportDir+newFilename])
-
+                with open("{}jhead.log".format(exportDir),"a+") as jheadlog:
+                    autorot = subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename], stdout=jheadlog, stderr=jheadlog)
+                    norot = subprocess.call(["jhead", "-norot","-rgt", "-q", exportDir+newFilename], stdout=jheadlog, stderr=jheadlog)
+                files.append("jhead.log")
                 print "    * `%s`" % (newFilename)
                 files.append(newFilename+".json")
                 files.append(newFilename)
