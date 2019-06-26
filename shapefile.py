@@ -482,7 +482,7 @@ if images:
                 with open("{}jhead.log".format(exportDir),"a+") as jheadlog:
                     autorot = subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename], stdout=jheadlog, stderr=jheadlog)
                     norot = subprocess.call(["jhead", "-norot","-rgt", "-q", exportDir+newFilename], stdout=jheadlog, stderr=jheadlog)
-                files.append("jhead.log")
+
                 print "    * `%s`" % (newFilename)
                 files.append(newFilename+".json")
                 files.append(newFilename)
@@ -646,7 +646,7 @@ with codecs.open("%s/faims.kml"%(exportDir), "w", encoding='utf-8') as faimskml:
     faimskml.write(kmldoc.to_string(prettyprint=True))
 
 files.append("faims.kml")
-
+files.append("jhead.log")
 
 
 for at in importCon.execute("select aenttypename from aenttype"):
