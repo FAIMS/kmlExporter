@@ -479,8 +479,8 @@ if images:
                 outputFilename[filename[0]][attributename][filehash["%s%s" % (filename[0], attributename)]] = {"newFilename":newFilename,
                                                                    "mimeType":mime.from_file(originalDir+filename[1])
                                                                    }
-                subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
-                subprocess.call(["jhead", "-norot","-rgt", "-q", exportDir+newFilename])
+                autorot = subprocess.call(["jhead", "-autorot","-q", exportDir+newFilename])
+                norot = subprocess.call(["jhead", "-norot","-rgt", "-q", exportDir+newFilename])
 
                 print "    * `%s`" % (newFilename)
                 files.append(newFilename+".json")
@@ -500,6 +500,7 @@ if images:
 
     for uuid in outputFilename:
         for attribute in outputFilename[uuid]:
+        	print "`"+((outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))+"`"
             exportCon.execute("update %s set %s = ? where uuid = ?" % (outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))
 
     files.append("attachedfiledump.csv")
