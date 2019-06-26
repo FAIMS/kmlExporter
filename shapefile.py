@@ -603,7 +603,7 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
         extended_data = []
         for key in exportrow:
             if "geospatialcolumn" not in key:
-                data = kml.UntypedExtendedDataElement(ns, name=key, value=str(exportrow[key]))                
+                data = kml.UntypedExtendedDataElement(ns, name=key, value=unicode(exportrow[key]))                
                 extended_data.append(data)
                 if exportrow[key]:
                     description = "{}<dt>{}</dt><dd>{}</dd>".format(description, key, exportrow[key])
@@ -638,7 +638,7 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
 
         kmlfolder.append(placemark)
 
-with open("%s/faims.kml"%(exportDir), "w") as faimskml:
+with codecs.open("%s/faims.kml"%(exportDir), "w", encoding='utf-8') as faimskml:
     faimskml.write(kmldoc.to_string(prettyprint=True))
 
 files.append("faims.kml")
