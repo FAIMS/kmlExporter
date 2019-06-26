@@ -500,8 +500,10 @@ if images:
 
     for uuid in outputFilename:
         for attribute in outputFilename[uuid]:
-            print "`{}{}{}{}`".format(outputAent[uuid], attribute, json.dumps(outputFilename[uuid][attribute]) , uuid)
-            exportCon.execute("update %s set %s = ? where uuid = ?" % (outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))
+            try:
+                exportCon.execute("update %s set %s = ? where uuid = ?" % (outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))
+            except sqlite3.OperationalError:
+                print("Tried to update %s with %s on uuid %s. Contact support immediately with a download of this module and this error." % (outputAent[uuid], attribute, uuid))
 
     files.append("attachedfiledump.csv")
     csv_writer = UnicodeWriter(open(exportDir+"attachedfiledump.csv", "wb+"))
