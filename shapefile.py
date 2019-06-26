@@ -500,7 +500,7 @@ if images:
 
     for uuid in outputFilename:
         for attribute in outputFilename[uuid]:
-        	print "`"+((outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))+"`"
+            print "`"+((outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))+"`"
             exportCon.execute("update %s set %s = ? where uuid = ?" % (outputAent[uuid], attribute), (json.dumps(outputFilename[uuid][attribute]) , uuid))
 
     files.append("attachedfiledump.csv")
