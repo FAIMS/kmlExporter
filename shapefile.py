@@ -646,7 +646,7 @@ with codecs.open("%s/faims.kml"%(exportDir), "w", encoding='utf-8') as faimskml:
     faimskml.write(kmldoc.to_string(prettyprint=True))
 
 files.append("faims.kml")
-files.append("jhead.log")
+#files.append("jhead.log")
 
 
 for at in importCon.execute("select aenttypename from aenttype"):
