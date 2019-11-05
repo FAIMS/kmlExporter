@@ -576,7 +576,7 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
         placemark.geometry = wkt.loads(geomrow[1])
         
         placemark.append_style(styles.Style(ns, styles=[styles.IconStyle(ns, color="ff{}".format(color), icon_href="http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png"), styles.LabelStyle(ns, colorMode="normal", color="ff{}".format(color))]))
-        description = """
+        description = u"""
         <p><i>{}</i></p>
         """.format(aenttypename)        
         uuid = int(exportrow['uuid'])
@@ -590,19 +590,19 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
                 imagepath = image.split("/")
                 if oldphotoheader != imagepath[1]:
                     oldphotoheader = imagepath[1]
-                    description = "{}<h4>{}</h4>".format(description, imagepath[1])
+                    description = u"{}<h4>{}</h4>".format(description, imagepath[1])
                 
                     
-                description = """{}
+                description = u"""{}
                 <img style="width: 90vw; " src="{}/{}"/>                
                 """.format(description, moduleName, image)
 
                 if caption:
-                    description = """{}                
+                    description = u"""{}                
                     <p>Annotation: <i>{}</i></p>""".format(description, caption)
                 #print description
             
-        description = "{}<h4>Data</h4><dl>".format(description)
+        description = u"{}<h4>Data</h4><dl>".format(description)
 
         extended_data = []
         for key in exportrow:
@@ -610,9 +610,9 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
                 data = kml.UntypedExtendedDataElement(ns, name=key, value=unicode(exportrow[key]))                
                 extended_data.append(data)
                 if exportrow[key]:
-                    description = "{}<dt>{}</dt><dd>{}</dd>".format(description, key, exportrow[key])
-        description = "{}</dl>".format(description)
-        description = "{}<h4>Relationships</h4><ul>".format(description)
+                    description = u"{}<dt>{}</dt><dd>{}</dd>".format(description, key, exportrow[key])
+        description = u"{}</dl>".format(description)
+        description = u"{}<h4>Relationships</h4><ul>".format(description)
         for relatedreln in importCon.execute("""
            SELECT child.uuid as childuuid, parent.participatesverb as parentparticipatesverb, child.aenttypename as childaenttypename, createdat
              FROM (SELECT uuid, participatesverb, aenttypename, relationshipid, relntimestamp as createdat
@@ -632,8 +632,8 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
             childidentifier = exportCon.execute("SELECT identifier FROM {} where uuid = ?".format(clean(relatedreln[2])), [int(relatedreln[0])]).fetchone()['identifier']
             # print(childidentifier)
             
-            description = "{}<li>{} {}: {}".format(description, relatedreln[1], relatedreln[2], childidentifier)
-        description = "{}</ul>".format(description)
+            description = u"{}<li>{} {}: {}".format(description, relatedreln[1], relatedreln[2], childidentifier)
+        description = u"{}</ul>".format(description)
 
         placemark.description = description
 
