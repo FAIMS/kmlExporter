@@ -183,11 +183,11 @@ def upper_repl(match):
     return match.group(1).upper()
 
 def clean(instr):
-     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr))
+     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr.decode("utf-8")))
      return out
 
 def cleanWithUnder(instr):
-     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr))     
+     out = re.sub("[^a-zA-Z0-9]+", "_", str(instr.decode("utf-8")))     
      return out  
 
 def makeSurePathExists(path):
