@@ -1,3 +1,5 @@
+#!/bin/bash -l
+
 sudo apt-get update
 sudo apt-get install python spatialite-bin libimage-exiftool-perl libspatialite-dev python-pip jhead python-numpy -y
 
