@@ -11,7 +11,7 @@ if rbenv local | grep -q '2.5.6' ; then
 
 echo "2.5.6 installed"
 else
-
+echo $(rbenv local)
 cd /home/faims/.rbenv/plugins/ruby-build && git pull && cd -
 
 rbenv install 2.5.6

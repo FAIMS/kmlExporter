@@ -55,7 +55,8 @@ import hashlib
 
 try:
     import zlib
-    compression = zipfile.ZIP_DEFLATED
+    #compression = zipfile.ZIP_DEFLATED
+    compression = zipfile.ZIP_STORED
 except:
     compression = zipfile.ZIP_STORED
 
@@ -586,7 +587,7 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
         oldphotoheader = None
         if uuid in kmlimages:
             for image, caption in kmlimages[uuid]:
-                print "Adding %s to kml"%(image)
+                #print "Adding %s to kml"%(image)
                 imagepath = image.split("/")
                 if oldphotoheader != imagepath[1]:
                     oldphotoheader = imagepath[1]
@@ -712,10 +713,34 @@ for relntypeid, relntypename in relntypecursor.execute(relntypequery):
 #     tarf.close()
 
 
-with zipfile.ZipFile("%s/%s-export-%s.kmz" % (finalExportDir, smart_truncate(moduleName), datetime.date.today().isoformat()), 'w', compression, allowZip64=True) as zipf:
+
+zipfilename = "%s/%s-export-%s.kmz" % (finalExportDir, smart_truncate(moduleName), datetime.date.today().isoformat())
+try:
+    for file in glob.glob(finalExportDir+"/*.kmz"):
+        print("* removing stale `{}`".format(file))
+        os.remove(file)
+except OSError:
+    pass
+print("Writing into `{}`".format(zipfilename))
+with zipfile.ZipFile(zipfilename, mode='w', compression=compression, allowZip64=True) as zipf:    
     for file in files:
-        print("* {} in zip".format(file))
+
+        try:
+            f = open(exportDir+file)
+            # Do something with the file
+            # print("* `{}` in zip as `{}`".format(exportDir+file, moduleName+'/'+file))
+        except IOError:
+            print("* `{}` not in zip, but should be".format(exportDir+file))
+        finally:
+            f.close()
+        
         zipf.write(exportDir+file, arcname=moduleName+'/'+file)
+
+
+    
+    
+    
+
 
 try:
     os.remove(exportDir)
