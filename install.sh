@@ -5,7 +5,7 @@ sudo pip install python-magic fastkml shapely ordereddict lxml numpy
 export PATH="$HOME/.rbenv/bin:$PATH" 
 eval "$(rbenv init -)"
 
-if [[ $(rbenv local) | grep -q '2.5.6'  ]]; then
+if rbenv local | grep -q '2.5.6' ; then
 
 echo "2.5.6 installed"
 else
