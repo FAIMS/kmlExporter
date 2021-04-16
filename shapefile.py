@@ -586,7 +586,7 @@ for row in importCon.execute("select aenttypeid, aenttypename, aenttypedescripti
         oldphotoheader = None
         if uuid in kmlimages:
             for image, caption in kmlimages[uuid]:
-                #print "Adding %s"%(image)
+                print "Adding %s to kml"%(image)
                 imagepath = image.split("/")
                 if oldphotoheader != imagepath[1]:
                     oldphotoheader = imagepath[1]
@@ -714,6 +714,7 @@ for relntypeid, relntypename in relntypecursor.execute(relntypequery):
 
 with zipfile.ZipFile("%s/%s-export-%s.kmz" % (finalExportDir, smart_truncate(moduleName), datetime.date.today().isoformat()), 'w', compression, allowZip64=True) as zipf:
     for file in files:
+        print("* {} in zip".format(file))
         zipf.write(exportDir+file, arcname=moduleName+'/'+file)
 
 try:
